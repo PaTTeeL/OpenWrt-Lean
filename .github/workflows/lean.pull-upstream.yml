@@ -1,0 +1,41 @@
+#
+# This is free software, lisence use MIT.
+# 
+# Copyright (C) 2019 KFERMercer <KFER.Mercer@gmail.com>
+# 
+# <https://github.com/KFERMercer/OpenWrt-CI>
+#
+
+name: Pull upstream weekly
+
+on:
+  schedule:
+    - cron: 0 4 * * 6
+  workflow_dispatch:
+
+env:
+  UPSTREAM_REPO: https://github.com/coolsnowwolf/lede.git
+
+jobs:
+  pull:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+    - name: Checkout
+      uses: actions/checkout@main
+      with:
+        fetch-depth: 0
+        lfs: true
+
+    - name: Set git identity
+      run : |
+        git config --global user.name "PaTTeeL"
+        git config --global user.email "PaTTeeL@users.noreply.github.com"
+
+    - name: Load upstream commits
+      run: git pull $UPSTREAM_REPO --no-edit --rebase --strategy-option=ours
+
+    - name: Push commits
+      run: git push --force origin

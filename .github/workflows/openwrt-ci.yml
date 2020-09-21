@@ -8,10 +8,16 @@
 name: OpenWrt-CI
 
 on:
-  schedule:
-    - cron: 0 20 * * *
-  release:
-    types: [published]
+#  schedule:
+#    - cron: 0 20 * * *
+#  release:
+#    types: [published]
+  workflow_dispatch:
+
+env:
+  AUTHOR_NAME: lean
+  DEVICE_NAME: xxxx
+  SSH_ACTIONS: false
 
 jobs:
 
@@ -27,8 +33,6 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v2
-        with:
-          ref: master
 
       - name: Space cleanup
         env:
@@ -51,7 +55,14 @@ jobs:
           ./scripts/feeds install -a
 
       - name: Generate configuration file
-        run: make defconfig
+        run: |
+          [ -e .github/workflows/$AUTHOR_NAME.$DEVICE_NAME.config ] && mv .github/workflows/$AUTHOR_NAME.$DEVICE_NAME.config .config
+          [ -e .github/workflows/$AUTHOR_NAME.DIY.sh ] && chmod +x .github/workflows/$AUTHOR_NAME.DIY.sh && .github/workflows/$AUTHOR_NAME.DIY.sh
+          make defconfig
+
+      - name: SSH connection to Actions
+        uses: P3TERX/debugger-action@master
+        if: env.SSH_ACTIONS == 'true'
 
       - name: Make download
         run: |
@@ -61,6 +72,7 @@ jobs:
       - name: Compile firmware
         run: |
           make -j$(nproc) || make -j1 V=s
+          echo -e "$(nproc) thread compile"
           echo "======================="
           echo "Space usage:"
           echo "======================="
@@ -83,21 +95,20 @@ jobs:
       - name: Deliver buildinfo
         uses: actions/upload-artifact@v2
         with:
-          name: OpenWrt_buildinfo
+          name: OpenWrt_buildinfo.${{ env.AUTHOR_NAME }}.${{ env.DEVICE_NAME }}
           path: ./artifact/buildinfo/
 
       - name: Deliver package
         uses: actions/upload-artifact@v2
         with:
-          name: OpenWrt_package
+          name: OpenWrt_package.${{ env.AUTHOR_NAME }}.${{ env.DEVICE_NAME }}
           path: ./artifact/package/
 
       - name: Deliver firmware
         uses: actions/upload-artifact@v2
         with:
-          name: OpenWrt_firmware
+          name: OpenWrt_firmware.${{ env.AUTHOR_NAME }}.${{ env.DEVICE_NAME }}
           path: ./bin/targets/
-  
 
       - name: Upload release asset
         if: github.event == 'release'
